@@ -1,0 +1,208 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Paleta do app, seguindo as telas de referência:
+       fundo creme, cards brancos, azul de ação ("Quem vem"), verde do
+       "Quem vai" e âmbar das etiquetas/logo. */
+    --background: 45 40% 96%;
+    --foreground: 215 25% 17%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 215 25% 17%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 215 25% 17%;
+
+    --primary: 221 83% 53%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 45 30% 93%;
+    --secondary-foreground: 215 25% 17%;
+
+    --muted: 45 25% 93%;
+    --muted-foreground: 220 9% 46%;
+
+    --accent: 45 35% 92%;
+    --accent-foreground: 215 25% 17%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+
+    /* Verde do tipo "Quem vai" */
+    --success: 142 71% 36%;
+    --success-foreground: 0 0% 100%;
+
+    /* Âmbar das etiquetas de seção, do logo e do cadeado do PIN */
+    --brand: 26 82% 38%;
+    --brand-foreground: 0 0% 100%;
+
+    /* Barra de navegação escura do topo */
+    --nav: 221 40% 19%;
+    --nav-foreground: 45 40% 96%;
+
+    /* Fundo dos campos de formulário */
+    --field: 45 30% 97%;
+    --field-foreground: 215 25% 17%;
+
+    /* Azul-claro da caixa e do cabeçalho da tabela do documento do relatório */
+    --doc: 213 97% 87%;
+    --doc-foreground: 215 25% 17%;
+
+    --border: 43 20% 87%;
+    --input: 43 22% 82%;
+    --ring: 26 82% 45%;
+
+    --radius: 0.75rem;
+
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  .dark {
+    --background: 221 40% 13%;
+    --foreground: 45 40% 96%;
+
+    --card: 221 38% 17%;
+    --card-foreground: 45 40% 96%;
+
+    --popover: 221 38% 17%;
+    --popover-foreground: 45 40% 96%;
+
+    --primary: 221 83% 60%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 221 30% 22%;
+    --secondary-foreground: 45 40% 96%;
+
+    --muted: 221 30% 22%;
+    --muted-foreground: 220 12% 70%;
+
+    --accent: 221 30% 24%;
+    --accent-foreground: 45 40% 96%;
+
+    --destructive: 0 62.8% 40%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 142 55% 45%;
+    --success-foreground: 0 0% 100%;
+
+    --brand: 26 70% 55%;
+    --brand-foreground: 0 0% 100%;
+
+    --nav: 221 40% 10%;
+    --nav-foreground: 45 40% 96%;
+
+    --field: 221 30% 20%;
+    --field-foreground: 45 40% 96%;
+
+    --doc: 221 45% 32%;
+    --doc-foreground: 45 40% 96%;
+
+    --border: 221 25% 26%;
+    --input: 221 25% 30%;
+    --ring: 26 70% 55%;
+
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background font-sans text-foreground antialiased;
+  }
+
+  /* O relatório usa link do Google Maps; mantemos o azul sublinhado do
+     documento impresso mesmo dentro de textos escuros. */
+  .doc-link {
+    @apply break-all text-primary underline underline-offset-2;
+  }
+}
+
+html,
+body,
+#root {
+  width: 100%;
+  min-height: 100%;
+}
+
+/* ------------------------------------------------------------------
+   Impressão do relatório
+   Um documento por congregação, com quebra de página entre eles.
+   Os elementos de interface (menu, botões, títulos de tela) recebem
+   .no-print; o documento usa .print-doc + .print-page.
+   ------------------------------------------------------------------ */
+@media print {
+  @page {
+    size: A4;
+    margin: 12mm;
+  }
+
+  html,
+  body {
+    background: #ffffff !important;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  .print-page {
+    break-after: page;
+    page-break-after: always;
+  }
+
+  .print-page:last-of-type {
+    break-after: auto;
+    page-break-after: auto;
+  }
+
+  /* Preserva o fundo azul da caixa e do cabeçalho da tabela no papel */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Escala compacta de A4, igual à pré-visualização do documento */
+  .print-doc {
+    font-size: 10.5px !important;
+    line-height: 1.35 !important;
+    box-shadow: none !important;
+    border: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    max-width: none !important;
+  }
+
+  .print-doc .print-doc-title {
+    font-size: 12px !important;
+  }
+
+  .print-doc .print-doc-table {
+    font-size: 10.5px !important;
+  }
+
+  .print-doc .print-doc-table th,
+  .print-doc .print-doc-table td {
+    padding: 3px 5px !important;
+  }
+}

@@ -1,0 +1,91 @@
+// Congregações: consultas e gravações centralizadas aqui (nenhuma tela fala
+// com o backend diretamente).
+
+import { supabase } from "@/integrations/supabase/client";
+import { emptyToNull, unwrap, unwrapNullable } from "@/services/support";
+import type { Congregacao, CongregacaoInput } from "@/types/domain";
+
+function normalizar(input: CongregacaoInput): CongregacaoInput {
+  return {
+    nome: input.nome.trim(),
+    endereco: emptyToNull(input.endereco),
+    dia_reuniao: emptyToNull(input.dia_reuniao),
+    horario: emptyToNull(input.horario),
+    google_maps_url: emptyToNull(input.google_maps_url),
+    observacoes: emptyToNull(input.observacoes),
+  };
+}
+
+export async function listCongregacoes(): Promise<Congregacao[]> {
+  return unwrap(
+    await supabase.from("congregacoes").select("*").order("nome", { ascending: true }),
+    "Não foi possível carregar as congregações",
+  );
+}
+
+/** A congregação do responsável pelo arranjo (a única com `is_local = true`). */
+export async function getCongregacaoLocal(): Promise<Congregacao | null> {
+  return unwrapNullable(
+    await supabase.from("congregacoes").select("*").eq("is_local", true).maybeSingle(),
+    "Não foi possível carregar a congregação local",
+  );
+}
+
+export async function createCongregacao(input: CongregacaoInput): Promise<Congregacao> {
+  return unwrap(
+    await supabase.from("congregacoes").insert(normalizar(input)).select("*").single(),
+    "Não foi possível salvar a congregação",
+  );
+}
+
+export async function updateCongregacao(
+  id: string,
+  input: CongregacaoInput,
+): Promise<Congregacao> {
+  return unwrap(
+    await supabase.from("congregacoes").update(normalizar(input)).eq("id", id).select("*").single(),
+    "Não foi possível salvar a congregação",
+  );
+}
+
+export async function deleteCongregacao(id: string): Promise<void> {
+  const { error } = await supabase.from("congregacoes").delete().eq("id", id);
+  if (error?.code === "23503") {
+    throw new Error(
+      "Não é possível excluir esta congregação: ela está vinculada a irmãos ou arranjos.",
+    );
+  }
+  if (error) throw new Error(`Não foi possível excluir a congregação: ${error.message}`);
+}
+
+/**
+ * Define qual congregação é a local. O índice único parcial do banco garante
+ * apenas uma linha com `is_local = true`, então desmarcamos a anterior antes.
+ */
+export async function setCongregacaoLocal(id: string): Promise<void> {
+  const { error: erroLimpeza } = await supabase
+    .from("congregacoes")
+    .update({ is_local: false })
+    .eq("is_local", true);
+
+  if (erroLimpeza) {
+    throw new Error(`Não foi possível alterar a congregação local: ${erroLimpeza.message}`);
+  }
+
+  const { error } = await supabase
+    .from("congregacoes")
+    .update({ is_local: true })
+    .eq("id", id);
+
+  if (error) throw new Error(`Não foi possível definir a congregação local: ${error.message}`);
+}
+
+/** Remove a marcação de congregação local. */
+export async function unsetCongregacaoLocal(id: string): Promise<void> {
+  const { error } = await supabase
+    .from("congregacoes")
+    .update({ is_local: false })
+    .eq("id", id);
+
+  if (error) throw new Error(`Não foi possível alterar a congregação local: ${error.message}`);
+}
