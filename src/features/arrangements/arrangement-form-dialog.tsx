@@ -377,6 +377,11 @@ export function ArrangementFormDialog({
                   />
                 )}
               />
+              <p className="text-xs text-muted-foreground">
+                {tipo === "vem"
+                  ? "Você pode alterar a congregação de origem. Se houver um irmão cadastrado, ela precisa corresponder à congregação dele."
+                  : "Você pode alterar a congregação de destino; escolha uma diferente da congregação local."}
+              </p>
               {formState.errors.congregacao_id ? (
                 <p className="text-sm text-destructive">
                   {formState.errors.congregacao_id.message}
