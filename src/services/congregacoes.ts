@@ -2,6 +2,7 @@
 // com o backend diretamente).
 
 import { supabase } from "@/integrations/supabase/client";
+import { todayISO } from "@/lib/date";
 import { emptyToNull, unwrap, unwrapNullable } from "@/services/support";
 import type { Congregacao, CongregacaoInput } from "@/types/domain";
 
@@ -50,12 +51,44 @@ export async function updateCongregacao(
 
 export async function deleteCongregacao(id: string): Promise<void> {
   const { error } = await supabase.from("congregacoes").delete().eq("id", id);
+  if (error?.code === "P0001") {
+    throw new Error(error.message);
+  }
   if (error?.code === "23503") {
     throw new Error(
-      "Não é possível excluir esta congregação: ela está vinculada a irmãos ou arranjos.",
+      "Não é possível excluir esta congregação porque ainda existem irmãos ou arranjos vinculados.",
     );
   }
   if (error) throw new Error(`Não foi possível excluir a congregação: ${error.message}`);
+}
+
+export async function getImpactoExclusaoCongregacao(id: string): Promise<{
+  datasPassadas: string[];
+  datasHojeOuFuturas: string[];
+  quantidadeIrmaos: number;
+}> {
+  const [arranjos, irmaos] = await Promise.all([
+    supabase
+      .from("programacoes")
+      .select("data")
+      .eq("congregacao_id", id)
+      .order("data", { ascending: true }),
+    supabase.from("irmaos").select("id", { count: "exact", head: true }).eq("congregacao_id", id),
+  ]);
+  if (arranjos.error) {
+    throw new Error(`Não foi possível verificar os arranjos da congregação: ${arranjos.error.message}`);
+  }
+  if (irmaos.error) {
+    throw new Error(`Não foi possível verificar os irmãos da congregação: ${irmaos.error.message}`);
+  }
+
+  const hoje = todayISO();
+  const datas = (arranjos.data ?? []).map(({ data }) => data);
+  return {
+    datasPassadas: datas.filter((data) => data < hoje),
+    datasHojeOuFuturas: datas.filter((data) => data >= hoje),
+    quantidadeIrmaos: irmaos.count ?? 0,
+  };
 }
 
 /**

@@ -10,7 +10,13 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { useExcluirArranjo } from "@/hooks/use-programacoes-mes";
 import { formatFullDate } from "@/lib/date";
 import { TIPO_CONGREGACAO_LABEL } from "@/lib/labels";
-import type { ArranjoDetalhado, TipoArranjo } from "@/types/domain";
+import {
+  getCongregacaoArranjo,
+  getNumeroArranjo,
+  getTemaArranjo,
+  type ArranjoDetalhado,
+  type TipoArranjo,
+} from "@/types/domain";
 
 interface ArrangementListProps {
   arranjos: ArranjoDetalhado[];
@@ -24,8 +30,10 @@ function tituloDoArranjo(arranjo: ArranjoDetalhado): string {
   if (arranjo.evento_especial) {
     return arranjo.descricao_evento ?? "Evento especial";
   }
-  return arranjo.discurso
-    ? `${arranjo.discurso.numero} — ${arranjo.discurso.tema}`
+  const numero = getNumeroArranjo(arranjo);
+  const tema = getTemaArranjo(arranjo);
+  return numero !== null && tema
+    ? `${numero} — ${tema}`
     : "Tema não informado";
 }
 
@@ -131,9 +139,9 @@ export function ArrangementList({
                 </p>
               )}
 
-              {arranjo.congregacao ? (
+              {getCongregacaoArranjo(arranjo) ? (
                 <p className="text-xs text-muted-foreground">
-                  {TIPO_CONGREGACAO_LABEL[tipo]}: {arranjo.congregacao.nome}
+                  {TIPO_CONGREGACAO_LABEL[tipo]}: {getCongregacaoArranjo(arranjo)}
                 </p>
               ) : null}
             </div>

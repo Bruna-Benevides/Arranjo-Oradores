@@ -20,6 +20,11 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useDefinirCongregacaoLocal, useSalvarCongregacao } from "@/hooks/use-congregacoes";
 import { useCongregacaoLocal } from "@/hooks/use-congregacoes";
+import {
+    clearSessionFormDraft,
+    readSessionFormDraft,
+    saveSessionFormDraft,
+} from "@/lib/session-form-draft";
 import type { Congregacao } from "@/types/domain";
 
 const esquema = z.object({
@@ -43,6 +48,7 @@ const VALORES_INICIAIS: Valores = {
     observacoes: "",
     is_local: false,
 };
+const RASCUNHO_KEY = "nova-congregacao";
 
 interface CongregacaoFormDialogProps {
     aberto: boolean;
@@ -59,7 +65,7 @@ export function CongregacaoFormDialog({
     const definirLocal = useDefinirCongregacaoLocal();
     const { data: congregacaoLocal } = useCongregacaoLocal();
 
-    const { control, handleSubmit, register, reset, formState } = useForm<Valores>({
+    const { control, handleSubmit, register, reset, watch, formState } = useForm<Valores>({
         resolver: zodResolver(esquema),
         defaultValues: VALORES_INICIAIS,
     });
@@ -77,9 +83,15 @@ export function CongregacaoFormDialog({
                     observacoes: congregacao.observacoes ?? "",
                     is_local: congregacao.is_local,
                 }
-                : VALORES_INICIAIS,
+                : readSessionFormDraft<Valores>(RASCUNHO_KEY) ?? VALORES_INICIAIS,
         );
     }, [aberto, congregacao, reset]);
+
+    useEffect(() => {
+        if (!aberto || congregacao) return;
+        const subscription = watch((valores) => saveSessionFormDraft(RASCUNHO_KEY, valores));
+        return () => subscription.unsubscribe();
+    }, [aberto, congregacao, watch]);
 
     const enviar = handleSubmit(async (valores) => {
         try {
@@ -102,6 +114,7 @@ export function CongregacaoFormDialog({
             }
 
             toast.success(congregacao ? "Congregação atualizada." : "Congregação cadastrada.");
+            if (!congregacao) clearSessionFormDraft(RASCUNHO_KEY);
             onOpenChange(false);
         } catch (excecao) {
             toast.error(
@@ -192,7 +205,10 @@ export function CongregacaoFormDialog({
                             variant="outline"
                             size="lg"
                             className="w-full"
-                            onClick={() => onOpenChange(false)}
+                            onClick={() => {
+                                if (!congregacao) clearSessionFormDraft(RASCUNHO_KEY);
+                                onOpenChange(false);
+                            }}
                         >
                             Cancelar
                         </Button>

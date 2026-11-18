@@ -8,8 +8,9 @@ project-root/
   ├── public/
   │   └── locales/           # public/locales/{code}.json translation files
   ├── supabase/
-  │   ├── config.toml        # backend function config (verify_jwt)
-  │   └── functions/         # backend functions (Deno)
+  │   ├── config.toml        # Supabase CLI configuration
+  │   ├── migrations/        # Database migrations
+  │   └── seed.sql           # Example records for local testing
   ├── src/
   │   ├── components/        # Reusable UI components
   │   │   ├── ui/            # Prebuilt and custom UI components, grouped by function
@@ -37,14 +38,18 @@ project-root/
 
 App de uso pessoal do responsável pelo arranjo de discursos. Menus: Programações, Relatório, Irmãos, Discursos, Cânticos, Congregações e Sair (menu superior fixo, só com ícones).
 
-- **src/services/**: única camada que fala com o backend (`congregacoes`, `irmaos`, `discursos`, `canticos`, `programacoes`, `configuracoes`, `pin`). Nenhum componente de tela chama o cliente diretamente — sempre via `src/hooks/*` (react-query, com invalidação de cache após cada gravação).
+- **src/services/**: camada reutilizável de acesso ao backend (`congregacoes`, `irmaos`, `discursos`, `canticos`, `programacoes`, `configuracoes`). O fluxo de autenticação usa Supabase Auth e as policies do banco limitam os dados aos IDs presentes em `usuarios_autorizados`.
+- **src/lib/catalog-csv.ts** + **src/components/common/catalog-import-dialog.tsx**: importação em lote de catálogos por CSV com somente `numero` e `tema`; adiciona números ausentes, atualiza temas diferentes e não altera registros com tema igual.
+- **src/services/backup.ts** + **src/components/common/backup-email-dialog.tsx**: exportação paginada dos dados operacionais para JSON, abertura de e-mail para anexo manual e restauração transacional por mesclagem; preserva valores existentes e completa apenas campos vazios.
+- **Exclusão de discursos/congregações:** mostrar os arranjos passados afetados e confirmar; a migration `20261020200000` guarda snapshots no arranjo, enquanto arranjos de hoje/futuros e vínculos de congregação com irmãos bloqueiam a exclusão.
+- **Rascunhos de formulários:** `src/lib/session-form-draft.ts` guarda temporariamente cadastros novos na sessão do navegador e reabre o formulário ao voltar à página; salvar ou cancelar remove o rascunho.
 - **src/types/domain.ts**: tipos das linhas derivados de `src/integrations/supabase/types.ts` (arquivo gerado pela plataforma; não editar). Também define `TipoArranjo` (`vem` | `vai`).
 - **src/lib/date.ts**: datas SEMPRE como string `yyyy-MM-dd`. Nunca usar `new Date("yyyy-MM-dd")` (interpreta como UTC e volta um dia).
 - **src/lib/report.ts**: agrupa os arranjos do mês por congregação — é o eixo do relatório.
 - **src/lib/whatsapp.ts** + **src/lib/rich-text.ts**: versão em texto puro do documento (`*negrito*`) e a marcação `**negrito**` das observações.
 - **src/pages/relatorio/report-document.tsx**: documento único, usado na tela e na impressão. O bloco `@media print` de `src/index.css` cuida da escala A4 e da quebra de página (classes `print-doc`, `print-page` e `no-print`).
-- **src/features/auth/**: acesso por PIN. O PIN é validado pela função de backend `pin-access` (hash PBKDF2 + limite de tentativas); a tabela `acesso_pin` não tem policies de RLS, portanto é inacessível pelo navegador.
-- **Significado de `programacoes.congregacao_id`**: é a congregação do outro lado — em `tipo = 'vem'` é a de ORIGEM (de onde vem o orador visitante); em `tipo = 'vai'` é a de DESTINO. Está comentado no banco e em `src/services/programacoes.ts`.
+- **src/features/auth/**: login com Supabase Auth; as páginas só são exibidas após a sessão ser confirmada e o usuário constar em `public.usuarios_autorizados`. As policies RLS também validam essa lista em todas as tabelas operacionais.
+- **Significado de `programacoes.congregacao_id`**: em `tipo = 'vem'` é a congregação de ORIGEM do orador (pode ser a local); em `tipo = 'vai'` é a congregação de DESTINO (não local), independente da congregação do orador. Está comentado no banco e em `src/services/programacoes.ts`.
 
 ## Directory Responsibilities
 

@@ -5,6 +5,7 @@
 // data do último uso e o total de usos de cada discurso.
 
 import { supabase } from "@/integrations/supabase/client";
+import { todayISO } from "@/lib/date";
 import type { Database } from "@/integrations/supabase/types";
 import { emptyToNull, unwrap } from "@/services/support";
 import type {
@@ -97,6 +98,34 @@ export async function createDiscurso(input: DiscursoInput): Promise<Discurso> {
   );
 }
 
+export async function importDiscursos(inputs: DiscursoInput[]): Promise<Discurso[]> {
+  if (inputs.length === 0) return [];
+
+  const existentes = unwrap(
+    await supabase
+      .from("discursos")
+      .select("numero, tema")
+      .in(
+        "numero",
+        inputs.map(({ numero }) => numero),
+      ),
+    "Não foi possível comparar os temas dos discursos",
+  );
+  const temaPorNumero = new Map(existentes.map((discurso) => [discurso.numero, discurso.tema]));
+  const alterarOuInserir = inputs.filter(({ numero, tema }) => temaPorNumero.get(numero) !== tema);
+  if (alterarOuInserir.length === 0) return [];
+
+  const { data, error } = await supabase
+    .from("discursos")
+    .upsert(alterarOuInserir, { onConflict: "numero" })
+    .select("*");
+  if (error?.code === "23505") {
+    throw new Error("Não foi possível importar os discursos porque há números duplicados.");
+  }
+  if (error) throw new Error(`Não foi possível importar os discursos: ${error.message}`);
+  return data;
+}
+
 export async function updateDiscurso(
   id: string,
   input: DiscursoInput,
@@ -114,12 +143,36 @@ export async function updateDiscurso(
 
 export async function deleteDiscurso(id: string): Promise<void> {
   const { error } = await supabase.from("discursos").delete().eq("id", id);
+  if (error?.code === "P0001") {
+    throw new Error(error.message);
+  }
   if (error?.code === "23503") {
     throw new Error(
-      "Não é possível excluir este discurso: ele está associado a arranjos. Use Bloquear para impedir novos usos.",
+      "Não é possível excluir este discurso porque ainda existem arranjos vinculados.",
     );
   }
   if (error) throw new Error(`Não foi possível excluir o discurso: ${error.message}`);
+}
+
+export async function getImpactoExclusaoDiscurso(id: string): Promise<{
+  datasPassadas: string[];
+  datasHojeOuFuturas: string[];
+}> {
+  const { data, error } = await supabase
+    .from("programacoes")
+    .select("data")
+    .eq("discurso_id", id)
+    .order("data", { ascending: true });
+  if (error) {
+    throw new Error(`Não foi possível verificar os arranjos do discurso: ${error.message}`);
+  }
+
+  const hoje = todayISO();
+  const datas = (data ?? []).map(({ data: dataArranjo }) => dataArranjo);
+  return {
+    datasPassadas: datas.filter((dataArranjo) => dataArranjo < hoje),
+    datasHojeOuFuturas: datas.filter((dataArranjo) => dataArranjo >= hoje),
+  };
 }
 
 /**

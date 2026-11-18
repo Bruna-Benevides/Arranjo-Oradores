@@ -11,6 +11,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CongregacaoFormDialog } from "@/features/congregacoes/congregacao-form-dialog";
 import { useCongregacoes, useDefinirCongregacaoLocal, useExcluirCongregacao } from "@/hooks/use-congregacoes";
+import { formatFullDate } from "@/lib/date";
+import { hasSessionFormDraft } from "@/lib/session-form-draft";
+import { getImpactoExclusaoCongregacao } from "@/services/congregacoes";
 import type { Congregacao } from "@/types/domain";
 
 const CongregacoesPage = () => {
@@ -19,9 +22,15 @@ const CongregacoesPage = () => {
   const definirLocal = useDefinirCongregacaoLocal();
 
   const [busca, setBusca] = useState("");
-  const [formAberto, setFormAberto] = useState(false);
+  const [formAberto, setFormAberto] = useState(() =>
+    hasSessionFormDraft("nova-congregacao"),
+  );
   const [emEdicao, setEmEdicao] = useState<Congregacao | null>(null);
   const [paraExcluir, setParaExcluir] = useState<Congregacao | null>(null);
+  const [impactoExclusao, setImpactoExclusao] = useState<
+    Awaited<ReturnType<typeof getImpactoExclusaoCongregacao>> | null
+  >(null);
+  const [verificandoExclusao, setVerificandoExclusao] = useState(false);
 
   const filtradas = useMemo(() => {
     const termo = busca.trim().toLowerCase();
@@ -47,8 +56,42 @@ const CongregacoesPage = () => {
       await excluir.mutateAsync(paraExcluir.id);
       toast.success("Congregação excluída.");
       setParaExcluir(null);
+      setImpactoExclusao(null);
     } catch (excecao) {
       toast.error(excecao instanceof Error ? excecao.message : "Não foi possível excluir.");
+    }
+  };
+
+  const prepararExclusao = async (congregacao: Congregacao) => {
+    if (congregacao.is_local) {
+      toast.error("A congregação local não pode ser excluída. Defina outra congregação como local primeiro.");
+      return;
+    }
+
+    setVerificandoExclusao(true);
+    try {
+      const impacto = await getImpactoExclusaoCongregacao(congregacao.id);
+      if (impacto.quantidadeIrmaos > 0) {
+        toast.error(
+          `Esta congregação ainda está vinculada a ${impacto.quantidadeIrmaos} irmão(s). Altere a congregação desses irmãos antes de excluir.`,
+        );
+        return;
+      }
+      if (impacto.datasHojeOuFuturas.length > 0) {
+        const datas = impacto.datasHojeOuFuturas.map(formatFullDate).join(", ");
+        toast.error(`Não é possível excluir: há arranjo(s) de hoje ou futuros em ${datas}.`);
+        return;
+      }
+      setImpactoExclusao(impacto);
+      setParaExcluir(congregacao);
+    } catch (excecao) {
+      toast.error(
+        excecao instanceof Error
+          ? excecao.message
+          : "Não foi possível verificar os vínculos da congregação.",
+      );
+    } finally {
+      setVerificandoExclusao(false);
     }
   };
 
@@ -148,7 +191,7 @@ const CongregacoesPage = () => {
                   setEmEdicao(congregacao);
                   setFormAberto(true);
                 }}
-                onExcluir={() => setParaExcluir(congregacao)}
+                onExcluir={() => void prepararExclusao(congregacao)}
               />
             </li>
           ))}
@@ -164,13 +207,34 @@ const CongregacoesPage = () => {
       <ConfirmDeleteDialog
         aberto={paraExcluir !== null}
         onOpenChange={(aberto) => {
-          if (!aberto) setParaExcluir(null);
+          if (!aberto) {
+            setParaExcluir(null);
+            setImpactoExclusao(null);
+          }
         }}
         titulo="Excluir congregação"
         descricao={
-          paraExcluir
-            ? `${paraExcluir.nome} será excluída. Os arranjos já registrados continuam salvos, mas ficam sem congregação.`
-            : null
+          paraExcluir && impactoExclusao ? (
+            <div className="space-y-3">
+              <p>A congregação “{paraExcluir.nome}” será excluída do cadastro.</p>
+              {impactoExclusao.datasPassadas.length > 0 ? (
+                <div className="space-y-2 rounded-md border border-destructive/40 bg-destructive/5 p-3">
+                  <p>
+                    Ela aparece em {impactoExclusao.datasPassadas.length} arranjo(s) passado(s).
+                    Esses arranjos serão mantidos, com o nome da congregação guardado no histórico:
+                  </p>
+                  <ul className="max-h-32 list-disc space-y-1 overflow-y-auto pl-5">
+                    {impactoExclusao.datasPassadas.map((data, indice) => (
+                      <li key={`${data}-${indice}`}>{formatFullDate(data)}</li>
+                    ))}
+                  </ul>
+                </div>
+              ) : (
+                <p>Não há arranjos passados vinculados a esta congregação.</p>
+              )}
+              <p>Deseja excluir mesmo assim?</p>
+            </div>
+          ) : verificandoExclusao ? "Verificando arranjos vinculados..." : null
         }
         confirmando={excluir.isPending}
         onConfirmar={confirmarExclusao}

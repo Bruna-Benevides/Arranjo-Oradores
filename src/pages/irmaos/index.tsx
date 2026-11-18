@@ -12,6 +12,7 @@ import { IrmaoFormDialog } from "@/features/irmaos/irmao-form-dialog";
 import { useCongregacoes } from "@/hooks/use-congregacoes";
 import { useExcluirIrmao, useIrmaos } from "@/hooks/use-irmaos";
 import { PRIVILEGIO_LABELS } from "@/lib/labels";
+import { hasSessionFormDraft } from "@/lib/session-form-draft";
 import { toPrivilegio, type Irmao } from "@/types/domain";
 
 const IrmaosPage = () => {
@@ -20,7 +21,7 @@ const IrmaosPage = () => {
   const excluir = useExcluirIrmao();
 
   const [busca, setBusca] = useState("");
-  const [formAberto, setFormAberto] = useState(false);
+  const [formAberto, setFormAberto] = useState(() => hasSessionFormDraft("novo-irmao"));
   const [emEdicao, setEmEdicao] = useState<Irmao | null>(null);
   const [paraExcluir, setParaExcluir] = useState<Irmao | null>(null);
 

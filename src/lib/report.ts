@@ -20,7 +20,10 @@ export function agruparPorCongregacao(
   const grupos = new Map<string, GrupoRelatorio>();
 
   arranjos.forEach((arranjo) => {
-    const chave = arranjo.congregacao_id ?? "__sem_congregacao__";
+    const nomeCongregacao = arranjo.congregacao?.nome ?? arranjo.congregacao_nome_historico;
+    const chave =
+      arranjo.congregacao_id ??
+      (nomeCongregacao ? `__historica__${nomeCongregacao}` : "__sem_congregacao__");
     const existente = grupos.get(chave);
 
     if (existente) {
@@ -30,15 +33,15 @@ export function agruparPorCongregacao(
 
     grupos.set(chave, {
       congregacaoId: arranjo.congregacao_id,
-      congregacaoNome: arranjo.congregacao?.nome ?? SEM_CONGREGACAO,
+      congregacaoNome: nomeCongregacao ?? SEM_CONGREGACAO,
       arranjos: [arranjo],
     });
   });
 
   // Grupos em ordem alfabética; o grupo sem congregação vai para o fim.
   return Array.from(grupos.values()).sort((a, b) => {
-    if (a.congregacaoId === null) return 1;
-    if (b.congregacaoId === null) return -1;
+    if (a.congregacaoId === null && b.congregacaoId !== null) return 1;
+    if (b.congregacaoId === null && a.congregacaoId !== null) return -1;
     return a.congregacaoNome.localeCompare(b.congregacaoNome, "pt-BR");
   });
 }

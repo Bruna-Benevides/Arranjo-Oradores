@@ -3360,33 +3360,18 @@ export type Database = {
   }
   public: {
     Tables: {
-      acesso_pin: {
+      usuarios_autorizados: {
         Row: {
-          bloqueado_ate: string | null
           created_at: string
-          id: number
-          pin_hash: string | null
-          pin_salt: string | null
-          tentativas_falhas: number
-          updated_at: string
+          user_id: string
         }
         Insert: {
-          bloqueado_ate?: string | null
           created_at?: string
-          id?: number
-          pin_hash?: string | null
-          pin_salt?: string | null
-          tentativas_falhas?: number
-          updated_at?: string
+          user_id: string
         }
         Update: {
-          bloqueado_ate?: string | null
           created_at?: string
-          id?: number
-          pin_hash?: string | null
-          pin_salt?: string | null
-          tentativas_falhas?: number
-          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -3547,10 +3532,13 @@ export type Database = {
       programacoes: {
         Row: {
           congregacao_id: string | null
+          congregacao_nome_historico: string | null
           created_at: string
           data: string
           descricao_evento: string | null
           discurso_id: string | null
+          discurso_numero_historico: number | null
+          discurso_tema_historico: string | null
           evento_especial: boolean
           id: string
           orador_id: string | null
@@ -3561,10 +3549,13 @@ export type Database = {
         }
         Insert: {
           congregacao_id?: string | null
+          congregacao_nome_historico?: string | null
           created_at?: string
           data: string
           descricao_evento?: string | null
           discurso_id?: string | null
+          discurso_numero_historico?: number | null
+          discurso_tema_historico?: string | null
           evento_especial?: boolean
           id?: string
           orador_id?: string | null
@@ -3575,10 +3566,13 @@ export type Database = {
         }
         Update: {
           congregacao_id?: string | null
+          congregacao_nome_historico?: string | null
           created_at?: string
           data?: string
           descricao_evento?: string | null
           discurso_id?: string | null
+          discurso_numero_historico?: number | null
+          discurso_tema_historico?: string | null
           evento_especial?: boolean
           id?: string
           orador_id?: string | null
@@ -3648,7 +3642,10 @@ export type Database = {
       }
     }
     Functions: {
-      [_ in never]: never
+      restaurar_backup_aplicativo: {
+        Args: { backup_payload: Json }
+        Returns: undefined
+      }
     }
     Enums: {
       tipo_programacao: "vem" | "vai"

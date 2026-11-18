@@ -42,10 +42,13 @@ export function useSalvarCongregacao() {
 }
 
 export function useExcluirCongregacao() {
-  const invalidar = useInvalidarCongregacoes();
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => deleteCongregacao(id),
-    onSuccess: invalidar,
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.congregacoes });
+      void queryClient.invalidateQueries({ queryKey: ["programacoes"] });
+    },
   });
 }
 

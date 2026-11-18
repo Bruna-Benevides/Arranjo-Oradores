@@ -17,6 +17,11 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useSalvarDiscurso } from "@/hooks/use-discursos";
+import {
+  clearSessionFormDraft,
+  readSessionFormDraft,
+  saveSessionFormDraft,
+} from "@/lib/session-form-draft";
 import type { Discurso } from "@/types/domain";
 
 const esquema = z.object({
@@ -28,6 +33,7 @@ type ValoresEntrada = z.input<typeof esquema>;
 type Valores = z.output<typeof esquema>;
 
 const VALORES_INICIAIS: ValoresEntrada = { numero: "", tema: "" };
+const RASCUNHO_KEY = "novo-discurso";
 
 interface DiscursoFormDialogProps {
   aberto: boolean;
@@ -42,15 +48,25 @@ export function DiscursoFormDialog({
 }: DiscursoFormDialogProps) {
   const salvar = useSalvarDiscurso();
 
-  const { handleSubmit, register, reset, formState } = useForm<ValoresEntrada, unknown, Valores>({
+  const { handleSubmit, register, reset, watch, formState } = useForm<ValoresEntrada, unknown, Valores>({
     resolver: zodResolver(esquema),
     defaultValues: VALORES_INICIAIS,
   });
 
   useEffect(() => {
     if (!aberto) return;
-    reset(discurso ? { numero: discurso.numero, tema: discurso.tema } : VALORES_INICIAIS);
+    reset(
+      discurso
+        ? { numero: discurso.numero, tema: discurso.tema }
+        : readSessionFormDraft<ValoresEntrada>(RASCUNHO_KEY) ?? VALORES_INICIAIS,
+    );
   }, [aberto, discurso, reset]);
+
+  useEffect(() => {
+    if (!aberto || discurso) return;
+    const subscription = watch((valores) => saveSessionFormDraft(RASCUNHO_KEY, valores));
+    return () => subscription.unsubscribe();
+  }, [aberto, discurso, watch]);
 
   const enviar = handleSubmit(async (valores) => {
     try {
@@ -59,6 +75,7 @@ export function DiscursoFormDialog({
         input: { numero: valores.numero, tema: valores.tema },
       });
       toast.success(discurso ? "Discurso atualizado." : "Discurso cadastrado.");
+      if (!discurso) clearSessionFormDraft(RASCUNHO_KEY);
       onOpenChange(false);
     } catch (excecao) {
       toast.error(excecao instanceof Error ? excecao.message : "Não foi possível salvar o discurso.");
@@ -103,7 +120,10 @@ export function DiscursoFormDialog({
               variant="outline"
               size="lg"
               className="w-full"
-              onClick={() => onOpenChange(false)}
+              onClick={() => {
+                if (!discurso) clearSessionFormDraft(RASCUNHO_KEY);
+                onOpenChange(false);
+              }}
             >
               Cancelar
             </Button>

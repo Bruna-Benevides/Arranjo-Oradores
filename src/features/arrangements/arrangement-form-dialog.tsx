@@ -5,9 +5,9 @@
 //    (visita do superintendente, assembleia...). O banco tem CHECK para isso.
 //  - Ao escolher um orador cadastrado, preenchemos nome, telefone e congregação
 //    como SUGESTÃO: tudo continua editável à mão.
-//  - A congregação só é preenchida automaticamente no tipo "vem", porque ali o
-//    irmão é de outra congregação (a de ORIGEM). No tipo "vai" o orador é da
-//    nossa congregação, então quem define o destino é você.
+//  - A congregação só é preenchida automaticamente no tipo "vem", usando a
+//    congregação de origem do irmão, que também pode ser a local.
+//    No tipo "vai", quem define a congregação de destino é você.
 //  - Salvar já confirma o compromisso (não há etapa de confirmação).
 
 import { useEffect, useState } from "react";
@@ -43,6 +43,11 @@ import {
   TIPO_DESCRICOES,
   TIPO_LABELS,
 } from "@/lib/labels";
+import {
+  clearSessionFormDraft,
+  readSessionFormDraft,
+  saveSessionFormDraft,
+} from "@/lib/session-form-draft";
 import type { ArranjoDetalhado, Irmao, TipoArranjo } from "@/types/domain";
 import { DiscursoCombobox } from "./discurso-combobox";
 import { OradorCombobox } from "./orador-combobox";
@@ -71,6 +76,10 @@ const VALORES_INICIAIS: Valores = {
   descricao_evento: "",
 };
 
+function chaveRascunho(tipo: TipoArranjo): string {
+  return `novo-arranjo-${tipo}`;
+}
+
 interface ArrangementFormDialogProps {
   aberto: boolean;
   onOpenChange: (aberto: boolean) => void;
@@ -98,6 +107,7 @@ export function ArrangementFormDialog({
   const { control, handleSubmit, register, reset, setError, setValue, watch, formState } =
     useForm<Valores>({ resolver: zodResolver(esquema), defaultValues: VALORES_INICIAIS });
 
+  const draftKey = chaveRascunho(tipo);
   const eventoEspecial = watch("evento_especial");
 
   /** Data sugerida: hoje, se o mês aberto for o atual; senão, o dia 1º do mês. */
@@ -120,10 +130,19 @@ export function ArrangementFormDialog({
             congregacao_id: arranjo.congregacao_id,
             descricao_evento: arranjo.descricao_evento ?? "",
           }
-        : { ...VALORES_INICIAIS, data: dataSugerida() },
+        : readSessionFormDraft<Valores>(draftKey) ?? {
+            ...VALORES_INICIAIS,
+            data: dataSugerida(),
+          },
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [aberto, arranjo, reset, mesDate]);
+  }, [aberto, arranjo, reset, mesDate, draftKey]);
+
+  useEffect(() => {
+    if (!aberto || arranjo) return;
+    const subscription = watch((valores) => saveSessionFormDraft(draftKey, valores));
+    return () => subscription.unsubscribe();
+  }, [aberto, arranjo, draftKey, watch]);
 
   /** Preenche nome, telefone e (só no tipo "vem") a congregação de origem. */
   const aplicarIrmao = (irmao: Irmao) => {
@@ -166,7 +185,7 @@ export function ArrangementFormDialog({
         setError("congregacao_id", { message: "Selecione a congregação." });
         return;
       }
-      if (congregacaoSelecionada.is_local) {
+      if (tipo === "vai" && congregacaoSelecionada.is_local) {
         setError("congregacao_id", {
           message: "Selecione uma congregação diferente da local.",
         });
@@ -178,26 +197,10 @@ export function ArrangementFormDialog({
         setError("orador_id", { message: "O irmão selecionado não está mais cadastrado." });
         return;
       }
-      if (irmaoSelecionado) {
-        const congregacaoDoIrmao = congregacoes.find(
-          (congregacao) => congregacao.id === irmaoSelecionado.congregacao_id,
-        );
-        if (tipo === "vem") {
-          if (congregacaoDoIrmao?.is_local) {
-            setError("orador_id", {
-              message: 'Em "Quem vem", o orador deve ser de outra congregação.',
-            });
-            return;
-          }
-          if (irmaoSelecionado.congregacao_id !== valores.congregacao_id) {
-            setError("congregacao_id", {
-              message: "A congregação de origem deve ser a do irmão selecionado.",
-            });
-            return;
-          }
-        } else if (!congregacaoDoIrmao?.is_local) {
-          setError("orador_id", {
-            message: 'Em "Quem vai", o orador cadastrado deve ser da congregação local.',
+      if (tipo === "vem" && irmaoSelecionado) {
+        if (irmaoSelecionado.congregacao_id !== valores.congregacao_id) {
+          setError("congregacao_id", {
+            message: "A congregação de origem deve ser a do irmão selecionado, inclusive se for a local.",
           });
           return;
         }
@@ -219,6 +222,7 @@ export function ArrangementFormDialog({
           descricao_evento: valores.descricao_evento,
         },
       });
+      if (!arranjo) clearSessionFormDraft(draftKey);
       toast.success(arranjo ? "Arranjo atualizado." : "Arranjo salvo.");
       onOpenChange(false);
     } catch (excecao) {
@@ -389,7 +393,10 @@ export function ArrangementFormDialog({
                 variant="outline"
                 size="lg"
                 className="w-full"
-                onClick={() => onOpenChange(false)}
+                onClick={() => {
+                  if (!arranjo) clearSessionFormDraft(draftKey);
+                  onOpenChange(false);
+                }}
               >
                 Cancelar
               </Button>

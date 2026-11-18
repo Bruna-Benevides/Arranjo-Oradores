@@ -7,6 +7,7 @@ import {
   BookOpen,
   Building2,
   CalendarDays,
+  Download,
   FileText,
   LogOut,
   UserCheck,
@@ -16,6 +17,8 @@ import { NavLink } from "react-router-dom";
 
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { BackupEmailDialog } from "@/components/common/backup-email-dialog";
+import { useState } from "react";
 
 interface ItemMenu {
   to: string;
@@ -37,6 +40,8 @@ interface TopNavProps {
 }
 
 export function TopNav({ onSair }: TopNavProps) {
+  const [backupAberto, setBackupAberto] = useState(false);
+
   return (
     <header className="no-print sticky top-0 z-40 bg-nav text-nav-foreground shadow-sm">
       <div className="mx-auto flex w-full max-w-[680px] items-center gap-1 px-2 py-1">
@@ -75,6 +80,20 @@ export function TopNav({ onSair }: TopNavProps) {
           <TooltipTrigger asChild>
             <button
               type="button"
+              onClick={() => setBackupAberto(true)}
+              aria-label="Fazer backup por e-mail"
+              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg transition-colors hover:bg-nav-foreground/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nav-foreground/50"
+            >
+              <Download className="h-5 w-5" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent>Fazer backup por e-mail</TooltipContent>
+        </Tooltip>
+
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
               onClick={onSair}
               aria-label="Sair"
               className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg transition-colors hover:bg-nav-foreground/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-nav-foreground/50"
@@ -85,6 +104,7 @@ export function TopNav({ onSair }: TopNavProps) {
           <TooltipContent>Sair</TooltipContent>
         </Tooltip>
       </div>
+      <BackupEmailDialog aberto={backupAberto} onOpenChange={setBackupAberto} />
     </header>
   );
 }

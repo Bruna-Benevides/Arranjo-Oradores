@@ -4,7 +4,13 @@
 
 import { formatDayMonth } from "@/lib/date";
 import { paraWhatsApp } from "@/lib/rich-text";
-import type { ArranjoDetalhado, Congregacao, GrupoRelatorio } from "@/types/domain";
+import {
+  getNumeroArranjo,
+  getTemaArranjo,
+  type ArranjoDetalhado,
+  type Congregacao,
+  type GrupoRelatorio,
+} from "@/types/domain";
 
 export interface DocumentoWhatsAppParams {
   /** "OUTUBRO 2026" */
@@ -26,11 +32,13 @@ function linhaDoArranjo(
     return `${data} - ${arranjo.descricao_evento ?? "Evento especial"}`;
   }
 
+  const numeroDiscurso = getNumeroArranjo(arranjo);
+  const temaDiscurso = getTemaArranjo(arranjo);
   const partes = [
     data,
     arranjo.orador_nome ?? "Orador não informado",
-    arranjo.discurso ? `Nº ${arranjo.discurso.numero}` : null,
-    arranjo.discurso?.tema ?? null,
+    numeroDiscurso !== null ? `Nº ${numeroDiscurso}` : null,
+    temaDiscurso,
   ].filter((parte): parte is string => Boolean(parte));
 
   if (incluirContato && arranjo.orador_telefone) {

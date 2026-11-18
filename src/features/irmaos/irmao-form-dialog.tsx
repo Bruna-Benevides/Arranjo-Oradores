@@ -30,6 +30,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { useCongregacoes } from "@/hooks/use-congregacoes";
 import { useSalvarIrmao } from "@/hooks/use-irmaos";
 import { PRIVILEGIO_LABELS, PRIVILEGIO_OPCOES } from "@/lib/labels";
+import {
+  clearSessionFormDraft,
+  readSessionFormDraft,
+  saveSessionFormDraft,
+} from "@/lib/session-form-draft";
 import type { Irmao } from "@/types/domain";
 
 const SEM_PRIVILEGIO = "nenhum";
@@ -51,6 +56,7 @@ const VALORES_INICIAIS: Valores = {
   telefone: "",
   observacoes: "",
 };
+const RASCUNHO_KEY = "novo-irmao";
 
 interface IrmaoFormDialogProps {
   aberto: boolean;
@@ -70,7 +76,7 @@ export function IrmaoFormDialog({
   const { data: congregacoes = [] } = useCongregacoes();
   const salvar = useSalvarIrmao();
 
-  const { control, handleSubmit, register, reset, formState } = useForm<Valores>({
+  const { control, handleSubmit, register, reset, watch, formState } = useForm<Valores>({
     resolver: zodResolver(esquema),
     defaultValues: VALORES_INICIAIS,
   });
@@ -90,9 +96,15 @@ export function IrmaoFormDialog({
             telefone: irmao.telefone ?? "",
             observacoes: irmao.observacoes ?? "",
           }
-        : VALORES_INICIAIS,
+        : readSessionFormDraft<Valores>(RASCUNHO_KEY) ?? VALORES_INICIAIS,
     );
   }, [aberto, irmao, reset]);
+
+  useEffect(() => {
+    if (!aberto || irmao) return;
+    const subscription = watch((valores) => saveSessionFormDraft(RASCUNHO_KEY, valores));
+    return () => subscription.unsubscribe();
+  }, [aberto, irmao, watch]);
 
   const enviar = handleSubmit(async (valores) => {
     try {
@@ -107,6 +119,7 @@ export function IrmaoFormDialog({
         },
       });
       toast.success(irmao ? "Irmão atualizado." : "Irmão cadastrado.");
+      if (!irmao) clearSessionFormDraft(RASCUNHO_KEY);
       onSalvo?.(salvo);
       onOpenChange(false);
     } catch (excecao) {
@@ -222,7 +235,10 @@ export function IrmaoFormDialog({
               variant="outline"
               size="lg"
               className="w-full"
-              onClick={() => onOpenChange(false)}
+              onClick={() => {
+                if (!irmao) clearSessionFormDraft(RASCUNHO_KEY);
+                onOpenChange(false);
+              }}
             >
               Cancelar
             </Button>

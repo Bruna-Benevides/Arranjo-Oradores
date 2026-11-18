@@ -6,6 +6,7 @@ import {
   createDiscurso,
   deleteDiscurso,
   desbloquearDiscurso,
+  importDiscursos,
   listDiscursos,
   listDiscursosComHistorico,
   updateDiscurso,
@@ -28,7 +29,16 @@ function useInvalidarDiscursos() {
   const queryClient = useQueryClient();
   return () => {
     void queryClient.invalidateQueries({ queryKey: queryKeys.discursos });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.discursosComHistorico });
   };
+}
+
+export function useImportarDiscursos() {
+  const invalidar = useInvalidarDiscursos();
+  return useMutation({
+    mutationFn: importDiscursos,
+    onSuccess: invalidar,
+  });
 }
 
 export function useSalvarDiscurso() {
@@ -44,9 +54,13 @@ export function useSalvarDiscurso() {
 
 export function useExcluirDiscurso() {
   const invalidar = useInvalidarDiscursos();
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => deleteDiscurso(id),
-    onSuccess: invalidar,
+    onSuccess: () => {
+      invalidar();
+      void queryClient.invalidateQueries({ queryKey: ["programacoes"] });
+    },
   });
 }
 

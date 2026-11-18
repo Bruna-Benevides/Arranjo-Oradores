@@ -1,5 +1,5 @@
 import { AppLayout } from "./components/layout/app-layout";
-import { PinGate } from "./features/auth/pin-gate";
+import { AuthGate } from "./features/auth/auth-gate";
 import CanticosPage from "./pages/canticos";
 import CongregacoesPage from "./pages/congregacoes";
 import DiscursosPage from "./pages/discursos";
@@ -8,16 +8,16 @@ import NotFound from "./pages/NotFound";
 import ProgramacoesPage from "./pages/programacoes";
 import RelatorioPage from "./pages/relatorio";
 
-// Todas as telas ficam dentro do PinGate (acesso por PIN) e do AppLayout
+// Todas as telas ficam dentro do AuthGate (conta autorizada) e do AppLayout
 // (menu superior fixo + coluna centralizada).
 export const routers = [
   {
     path: "/",
     name: "app",
     element: (
-      <PinGate>
+      <AuthGate>
         <AppLayout />
-      </PinGate>
+      </AuthGate>
     ),
     children: [
       { path: "/", name: "programacoes", element: <ProgramacoesPage /> },

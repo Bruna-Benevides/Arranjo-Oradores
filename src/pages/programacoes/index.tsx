@@ -11,6 +11,7 @@ import { ArrangementList, NovoArranjoButton } from "@/features/arrangements/arra
 import { useContadoresDoMes, useArranjosDoMes } from "@/hooks/use-programacoes-mes";
 import { useMonthParams } from "@/hooks/use-month-params";
 import { formatMonthShort } from "@/lib/date";
+import { hasSessionFormDraft } from "@/lib/session-form-draft";
 import { cn } from "@/lib/utils";
 import type { ArranjoDetalhado } from "@/types/domain";
 
@@ -19,7 +20,9 @@ const ProgramacoesPage = () => {
   const { data: arranjos, isLoading } = useArranjosDoMes(mes, tipo);
   const { data: contadores } = useContadoresDoMes(mes);
 
-  const [dialogoAberto, setDialogoAberto] = useState(false);
+  const [dialogoAberto, setDialogoAberto] = useState(() =>
+    hasSessionFormDraft(`novo-arranjo-${tipo}`),
+  );
   const [emEdicao, setEmEdicao] = useState<ArranjoDetalhado | null>(null);
 
   const abrirNovo = () => {

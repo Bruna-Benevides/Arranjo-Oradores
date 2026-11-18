@@ -1,23 +1,26 @@
 import { useMemo, useState } from "react";
-import { Plus } from "lucide-react";
+import { FileUp, Plus } from "lucide-react";
 import { toast } from "sonner";
 
+import { CatalogImportDialog } from "@/components/common/catalog-import-dialog";
 import { ConfirmDeleteDialog } from "@/components/common/confirm-delete-dialog";
 import { EmptyList } from "@/components/common/empty-list";
 import { RowActions } from "@/components/common/row-actions";
 import { SearchInput } from "@/components/common/search-input";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
-import { useCanticos, useExcluirCantico } from "@/hooks/use-canticos";
+import { useCanticos, useExcluirCantico, useImportarCanticos } from "@/hooks/use-canticos";
 import type { Cantico } from "@/types/domain";
 import { CanticoFormDialog } from "./cantico-form-dialog";
 
 const CanticosPage = () => {
   const { data: canticos, isLoading } = useCanticos();
   const excluir = useExcluirCantico();
+  const importar = useImportarCanticos();
 
   const [busca, setBusca] = useState("");
   const [formAberto, setFormAberto] = useState(false);
+  const [importacaoAberta, setImportacaoAberta] = useState(false);
   const [emEdicao, setEmEdicao] = useState<Cantico | null>(null);
   const [paraExcluir, setParaExcluir] = useState<Cantico | null>(null);
 
@@ -57,16 +60,26 @@ const CanticosPage = () => {
             placeholder="Buscar por número ou palavra do tema"
           />
         </div>
-        <Button
-          className="gap-1"
-          onClick={() => {
-            setEmEdicao(null);
-            setFormAberto(true);
-          }}
-        >
-          <Plus className="h-4 w-4" />
-          Novo cântico
-        </Button>
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <Button
+            variant="outline"
+            className="gap-1"
+            onClick={() => setImportacaoAberta(true)}
+          >
+            <FileUp className="h-4 w-4" />
+            Importar CSV
+          </Button>
+          <Button
+            className="gap-1"
+            onClick={() => {
+              setEmEdicao(null);
+              setFormAberto(true);
+            }}
+          >
+            <Plus className="h-4 w-4" />
+            Novo cântico
+          </Button>
+        </div>
       </div>
 
       {isLoading ? (
@@ -103,6 +116,27 @@ const CanticosPage = () => {
       )}
 
       <CanticoFormDialog aberto={formAberto} onOpenChange={setFormAberto} cantico={emEdicao} />
+
+      <CatalogImportDialog
+        aberto={importacaoAberta}
+        onOpenChange={setImportacaoAberta}
+        nomeCatalogo="cânticos"
+        itensExistentes={(canticos ?? []).map(({ numero, tema }) => ({ numero, tema }))}
+        salvando={importar.isPending}
+        onImportar={async (linhas, estatisticas) => {
+          try {
+            await importar.mutateAsync(linhas);
+            toast.success(
+              `Importação concluída: ${estatisticas.novos} adicionados, ${estatisticas.atualizados} temas atualizados e ${estatisticas.iguais} sem alteração.`,
+            );
+          } catch (excecao) {
+            toast.error(
+              excecao instanceof Error ? excecao.message : "Não foi possível importar os cânticos.",
+            );
+            throw excecao;
+          }
+        }}
+      />
 
       <ConfirmDeleteDialog
         aberto={paraExcluir !== null}

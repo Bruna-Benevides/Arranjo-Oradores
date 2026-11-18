@@ -1,5 +1,4 @@
 -- Dados fictícios apenas para validar a interface. Remova-os depois dos testes.
--- PIN padrão inicial: 1234 (PBKDF2-SHA256, 120 mil iterações).
 
 insert into public.congregacoes (id, nome, endereco, dia_reuniao, horario, google_maps_url, observacoes, is_local)
 values
@@ -39,13 +38,3 @@ values (
   E'Qualquer imprevisto ou eventual mudança, por favor me contate o mais breve possível.\nPara envio das informações como cântico e imagens: **[EXEMPLO] Nome e telefone**'
 )
 on conflict (chave) do nothing;
-
-insert into public.acesso_pin (id, pin_hash, pin_salt, tentativas_falhas, bloqueado_ate)
-values (
-  1,
-  '36ad82d3cf77d03d9a5afda87c3809499c37c488397f74a41fa34ea4b5348036',
-  'db3edd9a4cea35311cb182510680293e',
-  0,
-  null
-)
-on conflict (id) do nothing;

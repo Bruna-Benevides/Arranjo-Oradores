@@ -1,7 +1,8 @@
 import { useMemo, useState } from "react";
-import { Lock, LockOpen, Plus } from "lucide-react";
+import { FileUp, Lock, LockOpen, Plus } from "lucide-react";
 import { toast } from "sonner";
 
+import { CatalogImportDialog } from "@/components/common/catalog-import-dialog";
 import { ConfirmDeleteDialog } from "@/components/common/confirm-delete-dialog";
 import { EmptyList } from "@/components/common/empty-list";
 import { RowActions } from "@/components/common/row-actions";
@@ -10,8 +11,15 @@ import { PageHeader } from "@/components/layout/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { useDesbloquearDiscurso, useDiscursosComHistorico, useExcluirDiscurso } from "@/hooks/use-discursos";
+import {
+  useDesbloquearDiscurso,
+  useDiscursosComHistorico,
+  useExcluirDiscurso,
+  useImportarDiscursos,
+} from "@/hooks/use-discursos";
 import { formatFullDate } from "@/lib/date";
+import { hasSessionFormDraft } from "@/lib/session-form-draft";
+import { getImpactoExclusaoDiscurso } from "@/services/discursos";
 import type { Discurso, DiscursoComHistorico } from "@/types/domain";
 import { BloqueioDialog } from "./bloqueio-dialog";
 import { DiscursoFormDialog } from "./discurso-form-dialog";
@@ -27,13 +35,19 @@ const DiscursosPage = () => {
   const { data: discursos, isLoading } = useDiscursosComHistorico();
   const excluir = useExcluirDiscurso();
   const desbloquear = useDesbloquearDiscurso();
+  const importar = useImportarDiscursos();
 
   const [busca, setBusca] = useState("");
-  const [formAberto, setFormAberto] = useState(false);
+  const [formAberto, setFormAberto] = useState(() => hasSessionFormDraft("novo-discurso"));
+  const [importacaoAberta, setImportacaoAberta] = useState(false);
   const [emEdicao, setEmEdicao] = useState<Discurso | null>(null);
   const [bloqueioAberto, setBloqueioAberto] = useState(false);
   const [paraBloquear, setParaBloquear] = useState<Discurso | null>(null);
   const [paraExcluir, setParaExcluir] = useState<Discurso | null>(null);
+  const [impactoExclusao, setImpactoExclusao] = useState<
+    Awaited<ReturnType<typeof getImpactoExclusaoDiscurso>> | null
+  >(null);
+  const [verificandoExclusao, setVerificandoExclusao] = useState(false);
 
   const filtrados = useMemo(() => {
     const termo = busca.trim().toLowerCase();
@@ -74,8 +88,31 @@ const DiscursosPage = () => {
       await excluir.mutateAsync(paraExcluir.id);
       toast.success("Discurso excluído.");
       setParaExcluir(null);
+      setImpactoExclusao(null);
     } catch (excecao) {
       toast.error(excecao instanceof Error ? excecao.message : "Não foi possível excluir.");
+    }
+  };
+
+  const prepararExclusao = async (discurso: Discurso) => {
+    setVerificandoExclusao(true);
+    try {
+      const impacto = await getImpactoExclusaoDiscurso(discurso.id);
+      if (impacto.datasHojeOuFuturas.length > 0) {
+        const datas = impacto.datasHojeOuFuturas.map(formatFullDate).join(", ");
+        toast.error(`Não é possível excluir: há arranjo(s) de hoje ou futuros em ${datas}.`);
+        return;
+      }
+      setImpactoExclusao(impacto);
+      setParaExcluir(discurso);
+    } catch (excecao) {
+      toast.error(
+        excecao instanceof Error
+          ? excecao.message
+          : "Não foi possível verificar os arranjos do discurso.",
+      );
+    } finally {
+      setVerificandoExclusao(false);
     }
   };
 
@@ -95,10 +132,20 @@ const DiscursosPage = () => {
             placeholder="Buscar por número ou palavra do tema"
           />
         </div>
-        <Button className="gap-1" onClick={abrirNovo}>
-          <Plus className="h-4 w-4" />
-          Novo discurso
-        </Button>
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <Button
+            variant="outline"
+            className="gap-1"
+            onClick={() => setImportacaoAberta(true)}
+          >
+            <FileUp className="h-4 w-4" />
+            Importar CSV
+          </Button>
+          <Button className="gap-1" onClick={abrirNovo}>
+            <Plus className="h-4 w-4" />
+            Novo discurso
+          </Button>
+        </div>
       </div>
 
       {isLoading ? (
@@ -156,7 +203,7 @@ const DiscursosPage = () => {
 
               <RowActions
                 onEditar={() => abrirEdicao(discurso)}
-                onExcluir={() => setParaExcluir(discurso)}
+                onExcluir={() => void prepararExclusao(discurso)}
                 extra={
                   discurso.bloqueado ? (
                     <Tooltip>
@@ -196,6 +243,27 @@ const DiscursosPage = () => {
 
       <DiscursoFormDialog aberto={formAberto} onOpenChange={setFormAberto} discurso={emEdicao} />
 
+      <CatalogImportDialog
+        aberto={importacaoAberta}
+        onOpenChange={setImportacaoAberta}
+        nomeCatalogo="discursos"
+        itensExistentes={(discursos ?? []).map(({ numero, tema }) => ({ numero, tema }))}
+        salvando={importar.isPending}
+        onImportar={async (linhas, estatisticas) => {
+          try {
+            await importar.mutateAsync(linhas);
+            toast.success(
+              `Importação concluída: ${estatisticas.novos} adicionados, ${estatisticas.atualizados} temas atualizados e ${estatisticas.iguais} sem alteração.`,
+            );
+          } catch (excecao) {
+            toast.error(
+              excecao instanceof Error ? excecao.message : "Não foi possível importar os discursos.",
+            );
+            throw excecao;
+          }
+        }}
+      />
+
       <BloqueioDialog
         aberto={bloqueioAberto}
         onOpenChange={setBloqueioAberto}
@@ -205,13 +273,36 @@ const DiscursosPage = () => {
       <ConfirmDeleteDialog
         aberto={paraExcluir !== null}
         onOpenChange={(aberto) => {
-          if (!aberto) setParaExcluir(null);
+          if (!aberto) {
+            setParaExcluir(null);
+            setImpactoExclusao(null);
+          }
         }}
         titulo="Excluir discurso"
         descricao={
-          paraExcluir
-            ? `${paraExcluir.numero} — ${paraExcluir.tema} será excluído do catálogo. Os arranjos já registrados com ele continuam salvos, mas ficam sem tema. Se a ideia é apenas parar de usá-lo, use "Bloquear".`
-            : null
+          paraExcluir && impactoExclusao ? (
+            <div className="space-y-3">
+              <p>
+                O discurso {paraExcluir.numero} — “{paraExcluir.tema}” será excluído do catálogo.
+              </p>
+              {impactoExclusao.datasPassadas.length > 0 ? (
+                <div className="space-y-2 rounded-md border border-destructive/40 bg-destructive/5 p-3">
+                  <p>
+                    Ele aparece em {impactoExclusao.datasPassadas.length} arranjo(s) passado(s).
+                    Esses arranjos serão mantidos com o número e o tema guardados no histórico:
+                  </p>
+                  <ul className="max-h-32 list-disc space-y-1 overflow-y-auto pl-5">
+                    {impactoExclusao.datasPassadas.map((data, indice) => (
+                      <li key={`${data}-${indice}`}>{formatFullDate(data)}</li>
+                    ))}
+                  </ul>
+                </div>
+              ) : (
+                <p>Não há arranjos passados vinculados a este discurso.</p>
+              )}
+              <p>Deseja excluir mesmo assim? Para apenas impedir novos usos, escolha “Bloquear”.</p>
+            </div>
+          ) : verificandoExclusao ? "Verificando arranjos vinculados..." : null
         }
         confirmando={excluir.isPending}
         onConfirmar={confirmarExclusao}

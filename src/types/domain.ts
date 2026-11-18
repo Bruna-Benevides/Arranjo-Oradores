@@ -63,6 +63,18 @@ export interface ArranjoDetalhado extends Programacao {
   orador: Irmao | null;
 }
 
+export function getTemaArranjo(arranjo: ArranjoDetalhado): string | null {
+  return arranjo.discurso?.tema ?? arranjo.discurso_tema_historico;
+}
+
+export function getNumeroArranjo(arranjo: ArranjoDetalhado): number | null {
+  return arranjo.discurso?.numero ?? arranjo.discurso_numero_historico;
+}
+
+export function getCongregacaoArranjo(arranjo: ArranjoDetalhado): string | null {
+  return arranjo.congregacao?.nome ?? arranjo.congregacao_nome_historico;
+}
+
 /** Grupo de arranjos por congregação — é assim que o relatório é montado. */
 export interface GrupoRelatorio {
   /** `null` apenas para eventos especiais sem congregação informada. */

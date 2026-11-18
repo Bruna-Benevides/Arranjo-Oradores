@@ -22,6 +22,34 @@ export async function createCantico(input: CanticoInput): Promise<Cantico> {
   );
 }
 
+export async function importCanticos(inputs: CanticoInput[]): Promise<Cantico[]> {
+  if (inputs.length === 0) return [];
+
+  const existentes = unwrap(
+    await supabase
+      .from("canticos")
+      .select("numero, tema")
+      .in(
+        "numero",
+        inputs.map(({ numero }) => numero),
+      ),
+    "Não foi possível comparar os temas dos cânticos",
+  );
+  const temaPorNumero = new Map(existentes.map((cantico) => [cantico.numero, cantico.tema]));
+  const alterarOuInserir = inputs.filter(({ numero, tema }) => temaPorNumero.get(numero) !== tema);
+  if (alterarOuInserir.length === 0) return [];
+
+  const { data, error } = await supabase
+    .from("canticos")
+    .upsert(alterarOuInserir, { onConflict: "numero" })
+    .select("*");
+  if (error?.code === "23505") {
+    throw new Error("Não foi possível importar os cânticos porque há números duplicados.");
+  }
+  if (error) throw new Error(`Não foi possível importar os cânticos: ${error.message}`);
+  return data;
+}
+
 export async function updateCantico(id: string, input: CanticoInput): Promise<Cantico> {
   return unwrap(
     await supabase

@@ -1,8 +1,9 @@
 // Arranjos (a tabela `programacoes`).
 //
 // O campo `congregacao_id` significa "a congregação do outro lado": em
-// `tipo = 'vem'` é a congregação de ORIGEM do orador visitante; em
-// `tipo = 'vai'` é a congregação de DESTINO. O relatório agrupa por ele.
+// `tipo = 'vem'` é a congregação de ORIGEM do orador (inclusive a local); em
+// `tipo = 'vai'` é o DESTINO, não local e independente da congregação do orador.
+// O relatório agrupa por ele.
 
 import { supabase } from "@/integrations/supabase/client";
 import { monthRangeFromKey } from "@/lib/date";
@@ -35,10 +36,13 @@ function normalizar(input: ArranjoInput) {
     tipo: input.tipo,
     // Evento especial não tem orador nem discurso (o banco tem CHECK para isso).
     discurso_id: input.evento_especial ? null : input.discurso_id,
+    discurso_numero_historico: null,
+    discurso_tema_historico: null,
     orador_id: input.evento_especial ? null : input.orador_id,
     orador_nome: input.evento_especial ? null : emptyToNull(input.orador_nome),
     orador_telefone: input.evento_especial ? null : emptyToNull(input.orador_telefone),
     congregacao_id: input.congregacao_id || null,
+    congregacao_nome_historico: null,
     evento_especial: input.evento_especial,
     descricao_evento: input.evento_especial
       ? emptyToNull(input.descricao_evento)

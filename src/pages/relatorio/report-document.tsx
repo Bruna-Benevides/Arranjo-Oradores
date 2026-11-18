@@ -6,7 +6,13 @@
 
 import { formatDayMonth } from "@/lib/date";
 import { parseDestaques } from "@/lib/rich-text";
-import type { ArranjoDetalhado, Congregacao, GrupoRelatorio } from "@/types/domain";
+import {
+  getNumeroArranjo,
+  getTemaArranjo,
+  type ArranjoDetalhado,
+  type Congregacao,
+  type GrupoRelatorio,
+} from "@/types/domain";
 
 interface ReportDocumentProps {
   /** "OUTUBRO 2026" */
@@ -25,7 +31,7 @@ function celulaOradores(arranjo: ArranjoDetalhado): string {
 
 function celulaTema(arranjo: ArranjoDetalhado): string {
   if (arranjo.evento_especial) return arranjo.descricao_evento ?? "Evento especial";
-  return arranjo.discurso?.tema ?? "—";
+  return getTemaArranjo(arranjo) ?? "—";
 }
 
 export function ReportDocument({
@@ -105,7 +111,7 @@ export function ReportDocument({
                 {celulaOradores(arranjo)}
               </td>
               <td className="border border-foreground/70 px-2 py-1">
-                {arranjo.evento_especial ? "—" : (arranjo.discurso?.numero ?? "—")}
+                {arranjo.evento_especial ? "—" : (getNumeroArranjo(arranjo) ?? "—")}
               </td>
               <td className="border border-foreground/70 px-2 py-1">{celulaTema(arranjo)}</td>
               {incluirContato ? (
