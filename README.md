@@ -18,6 +18,7 @@ Crie ou selecione um projeto Supabase sob sua conta. O app usa Supabase Auth com
    ```dotenv
    VITE_SUPABASE_URL=https://SEU-PROJETO.supabase.co
    VITE_SUPABASE_ANON_KEY=sua-chave-publica-anon
+   VITE_VAPID_PUBLIC_KEY=chave-publica-vapid
    ```
 
    O `.gitignore` ignora `.env.local`. Nunca use `service_role` ou outro segredo de servidor nestas variáveis `VITE_*`.
@@ -84,6 +85,23 @@ O projeto é um site web responsivo com manifest e service worker. Gere os arqui
 
 No cadastro de congregação, ao sair do campo **Endereço**, o app cria um link de pesquisa no Google Maps. Ao sair do campo do link, tenta preencher rua, número, bairro, cidade e CEP usando coordenadas reconhecidas em links completos do Google Maps. Essa consulta envia as coordenadas ao serviço público OpenStreetMap/Nominatim; não exige chave de API. Links encurtados podem não conter coordenadas acessíveis ao navegador, então, nesse caso, abra o link no Google Maps e copie o endereço completo da barra do navegador, ou informe o endereço manualmente. O link gerado a partir do endereço pesquisa esse texto no Google Maps, não fixa necessariamente um ponto exato.
 
+## Notificações push e lembretes automáticos
+
+Os lembretes são enviados como notificações push para cada aparelho que ativou as notificações no app. A Edge Function verifica as pendências às 09:00 (horário de São Paulo) nos dias 12, 19 e 26 e considera o mês seguinte. Se não encontrar pendências ou não houver aparelho inscrito, não envia nada.
+
+- **Quem vem:** considera todas as datas do dia de reunião informado na congregação local no mês seguinte. Um arranjo ou evento especial já cadastrado preenche a data; arranjos sem orador ou tema são listados como incompletos.
+- **Quem vai:** verifica somente arranjos já cadastrados para o mês seguinte e avisa quando faltar orador ou tema. Não presume que haverá visita em toda reunião de outra congregação.
+- Cada navegador/aparelho precisa ativar as notificações separadamente; no iPhone, instale o site pela opção **Adicionar à Tela de Início** antes de ativá-las.
+
+Para configurar o push:
+
+1. Gere um par de chaves VAPID localmente com `npx web-push generate-vapid-keys`. Guarde a chave privada apenas para o próximo passo; nunca a publique nem a coloque em uma variável `VITE_*`.
+2. No projeto existente do Supabase, aplique `supabase/migrations/20261119010000_add_push_subscriptions.sql` pelo **SQL Editor** para criar a tabela segura de inscrições.
+3. Configure `VITE_VAPID_PUBLIC_KEY` no `.env.local` e também nas variáveis do projeto Vercel, depois faça um novo build/deploy do site.
+4. Configure os segredos da Edge Function no Supabase: `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` (por exemplo, `mailto:seu-email@exemplo.com`) e `REMINDER_CRON_SECRET`. O segredo de cron precisa ser igual ao valor já guardado no Vault para o agendamento existente.
+5. Faça deploy com `supabase functions deploy send-arrangement-reminders`. A chave `SUPABASE_SERVICE_ROLE_KEY` é fornecida pelo Supabase no runtime da função; nunca a exponha no site.
+6. Abra o app no celular, entre na conta e toque no ícone de notificações para permitir o envio naquele aparelho. Para testar, use **Supabase → Edge Functions → send-arrangement-reminders → Test**, método `POST`, cabeçalho `Authorization: Bearer SEU_REMINDER_CRON_SECRET` e corpo `{"test":true}`. O resultado deve indicar quantas inscrições receberam a notificação.
+7. O agendamento existente chama a função diariamente; não execute `supabase/reminders-scheduler.sql` novamente se o job já estiver criado. Consulte **Edge Functions → send-arrangement-reminders → Logs** para acompanhar erros e entregas.
 ## Dados de demonstração
 
 Os temas de exemplo no seed começam com `[EXEMPLO]`; não são temas reais. Após testar, remova apenas os registros de exemplo identificados por esse prefixo no painel Supabase.

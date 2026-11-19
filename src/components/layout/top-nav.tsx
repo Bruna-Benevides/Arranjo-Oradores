@@ -18,6 +18,7 @@ import { NavLink } from "react-router-dom";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { BackupEmailDialog } from "@/components/common/backup-email-dialog";
+import { PushNotificationButton } from "@/components/common/push-notification-button";
 import { useState } from "react";
 
 interface ItemMenu {
@@ -75,6 +76,15 @@ export function TopNav({ onSair }: TopNavProps) {
             </Tooltip>
           ))}
         </nav>
+
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span className="inline-flex" title="Ativar ou desativar notificações neste aparelho">
+              <PushNotificationButton />
+            </span>
+          </TooltipTrigger>
+          <TooltipContent>Notificações deste aparelho</TooltipContent>
+        </Tooltip>
 
         <Tooltip>
           <TooltipTrigger asChild>

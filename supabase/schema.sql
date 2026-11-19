@@ -242,6 +242,18 @@ create table public.configuracoes (
   updated_at timestamptz not null default now()
 );
 
+create table public.push_subscriptions (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  endpoint text not null,
+  subscription jsonb not null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  constraint push_subscriptions_user_endpoint_unique unique (user_id, endpoint)
+);
+
+create index push_subscriptions_user_id_idx on public.push_subscriptions(user_id);
+
 create table public.usuarios_autorizados (
   user_id uuid primary key references auth.users(id) on delete cascade,
   created_at timestamptz not null default now()
@@ -523,6 +535,7 @@ alter table public.canticos enable row level security;
 alter table public.programacoes enable row level security;
 alter table public.configuracoes enable row level security;
 alter table public.usuarios_autorizados enable row level security;
+alter table public.push_subscriptions enable row level security;
 
 create policy usuarios_autorizados_consultar_propria_conta
   on public.usuarios_autorizados for select to authenticated
@@ -594,13 +607,32 @@ create policy configuracoes_acesso_autorizado
     where ua.user_id = (select auth.uid())
   ));
 
+create policy push_subscriptions_acesso_proprio
+  on public.push_subscriptions for all to authenticated
+  using (
+    user_id = (select auth.uid())
+    and exists (
+      select 1 from public.usuarios_autorizados ua
+      where ua.user_id = (select auth.uid())
+    )
+  )
+  with check (
+    user_id = (select auth.uid())
+    and exists (
+      select 1 from public.usuarios_autorizados ua
+      where ua.user_id = (select auth.uid())
+    )
+  );
+
 revoke all on public.congregacoes, public.irmaos, public.discursos, public.canticos,
-  public.programacoes, public.configuracoes, public.usuarios_autorizados
+  public.programacoes, public.configuracoes, public.usuarios_autorizados,
+  public.push_subscriptions
   from public, anon;
 revoke all on public.usuarios_autorizados from authenticated;
 
 grant select, insert, update, delete on public.congregacoes, public.irmaos,
-  public.discursos, public.canticos, public.programacoes, public.configuracoes
+  public.discursos, public.canticos, public.programacoes, public.configuracoes,
+  public.push_subscriptions
   to authenticated;
 grant select on public.usuarios_autorizados to authenticated;
 revoke all on public.vw_discursos_ultimo_uso, public.vw_historico_discursos
