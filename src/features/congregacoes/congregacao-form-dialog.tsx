@@ -107,10 +107,8 @@ export function CongregacaoFormDialog({
                 },
             });
 
-            // A regra "só uma congregação local" é aplicada no banco; aqui apenas
-            // marcamos/desmarcamos conforme o checkbox.
-            if (valores.is_local || congregacao?.is_local !== valores.is_local) {
-                await definirLocal.mutateAsync({ id: salva.id, isLocal: valores.is_local });
+            if (valores.is_local && congregacaoLocal?.id !== salva.id) {
+                await definirLocal.mutateAsync(salva.id);
             }
 
             toast.success(congregacao ? "Congregação atualizada." : "Congregação cadastrada.");
@@ -182,10 +180,16 @@ export function CongregacaoFormDialog({
                             <label className="flex cursor-pointer items-center gap-3 rounded-lg border border-border bg-field px-3 py-3">
                                 <Checkbox
                                     checked={field.value}
+                                    disabled={Boolean(congregacao?.is_local)}
                                     onCheckedChange={(valor) => field.onChange(valor === true)}
                                 />
                                 <span className="text-sm">
                                     É a congregação local (a do responsável pelo arranjo)
+                                    {congregacao?.is_local ? (
+                                        <span className="block text-xs text-muted-foreground">
+                                            Para trocar, marque outra congregação como local.
+                                        </span>
+                                    ) : null}
                                     {congregacaoLocal && congregacaoLocal.id !== congregacao?.id ? (
                                         <span className="block text-xs text-muted-foreground">
                                             Hoje é {congregacaoLocal.nome}; marcar aqui troca a congregação local.

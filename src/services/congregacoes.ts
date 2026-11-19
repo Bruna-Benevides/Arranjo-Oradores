@@ -112,13 +112,3 @@ export async function setCongregacaoLocal(id: string): Promise<void> {
 
   if (error) throw new Error(`Não foi possível definir a congregação local: ${error.message}`);
 }
-
-/** Remove a marcação de congregação local. */
-export async function unsetCongregacaoLocal(id: string): Promise<void> {
-  const { error } = await supabase
-    .from("congregacoes")
-    .update({ is_local: false })
-    .eq("id", id);
-
-  if (error) throw new Error(`Não foi possível alterar a congregação local: ${error.message}`);
-}

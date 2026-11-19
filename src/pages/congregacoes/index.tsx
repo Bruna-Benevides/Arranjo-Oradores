@@ -10,7 +10,12 @@ import { PageHeader } from "@/components/layout/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CongregacaoFormDialog } from "@/features/congregacoes/congregacao-form-dialog";
-import { useCongregacoes, useDefinirCongregacaoLocal, useExcluirCongregacao } from "@/hooks/use-congregacoes";
+import {
+  useCongregacaoLocal,
+  useCongregacoes,
+  useDefinirCongregacaoLocal,
+  useExcluirCongregacao,
+} from "@/hooks/use-congregacoes";
 import { formatFullDate } from "@/lib/date";
 import { hasSessionFormDraft } from "@/lib/session-form-draft";
 import { getImpactoExclusaoCongregacao } from "@/services/congregacoes";
@@ -18,6 +23,7 @@ import type { Congregacao } from "@/types/domain";
 
 const CongregacoesPage = () => {
   const { data: congregacoes, isLoading } = useCongregacoes();
+  const { data: congregacaoLocal } = useCongregacaoLocal();
   const excluir = useExcluirCongregacao();
   const definirLocal = useDefinirCongregacaoLocal();
 
@@ -43,7 +49,7 @@ const CongregacoesPage = () => {
 
   const marcarComoLocal = async (congregacao: Congregacao) => {
     try {
-      await definirLocal.mutateAsync({ id: congregacao.id, isLocal: true });
+      await definirLocal.mutateAsync(congregacao.id);
       toast.success(`${congregacao.nome} agora é a congregação local.`);
     } catch (excecao) {
       toast.error(excecao instanceof Error ? excecao.message : "Não foi possível alterar.");
@@ -162,7 +168,9 @@ const CongregacoesPage = () => {
                     onClick={() => void marcarComoLocal(congregacao)}
                     className="text-xs font-medium text-primary underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
                   >
-                    Definir como congregação local
+                    {congregacaoLocal
+                      ? "Definir como congregação local (substitui a atual)"
+                      : "Definir como congregação local"}
                   </button>
                 )}
 

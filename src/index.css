@@ -176,21 +176,39 @@ body,
     page-break-after: auto;
   }
 
-  /* Preserva o fundo azul da caixa e do cabeçalho da tabela no papel */
-  * {
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
-  }
-
   /* Escala compacta de A4, igual à pré-visualização do documento */
   .print-doc {
     font-size: 10.5px !important;
     line-height: 1.35 !important;
     box-shadow: none !important;
     border: 0 !important;
+    background: #ffffff !important;
+    color: #000000 !important;
     padding: 0 !important;
     margin: 0 !important;
     max-width: none !important;
+  }
+
+  .print-doc *,
+  .print-doc *::before,
+  .print-doc *::after {
+    background: transparent !important;
+    color: #000000 !important;
+    border-color: #333333 !important;
+    -webkit-print-color-adjust: economy !important;
+    print-color-adjust: economy !important;
+  }
+
+  .print-doc .print-doc-title {
+    background: #dbeafe !important;
+    color: #000000 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .print-doc .doc-link {
+    color: #2563eb !important;
+    text-decoration: underline !important;
   }
 
   .print-doc .print-doc-title {

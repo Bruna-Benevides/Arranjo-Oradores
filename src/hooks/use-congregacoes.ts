@@ -7,7 +7,6 @@ import {
   getCongregacaoLocal,
   listCongregacoes,
   setCongregacaoLocal,
-  unsetCongregacaoLocal,
   updateCongregacao,
 } from "@/services/congregacoes";
 
@@ -27,6 +26,7 @@ function useInvalidarCongregacoes() {
   const queryClient = useQueryClient();
   return () => {
     void queryClient.invalidateQueries({ queryKey: queryKeys.congregacoes });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.congregacaoLocal });
   };
 }
 
@@ -56,8 +56,7 @@ export function useExcluirCongregacao() {
 export function useDefinirCongregacaoLocal() {
   const invalidar = useInvalidarCongregacoes();
   return useMutation({
-    mutationFn: (payload: { id: string; isLocal: boolean }) =>
-      payload.isLocal ? setCongregacaoLocal(payload.id) : unsetCongregacaoLocal(payload.id),
+    mutationFn: (id: string) => setCongregacaoLocal(id),
     onSuccess: invalidar,
   });
 }
