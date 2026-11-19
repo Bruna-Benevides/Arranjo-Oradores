@@ -147,9 +147,9 @@ body,
 
 /* ------------------------------------------------------------------
    Impressão do relatório
-   Um documento por congregação, com quebra de página entre eles.
+   Um documento consolidado por tipo de arranjo.
    Os elementos de interface (menu, botões, títulos de tela) recebem
-   .no-print; o documento usa .print-doc + .print-page.
+   .no-print; o documento usa .print-doc.
    ------------------------------------------------------------------ */
 @media print {
   @page {
@@ -164,16 +164,6 @@ body,
 
   .no-print {
     display: none !important;
-  }
-
-  .print-page {
-    break-after: page;
-    page-break-after: always;
-  }
-
-  .print-page:last-of-type {
-    break-after: auto;
-    page-break-after: auto;
   }
 
   /* Escala compacta de A4, igual à pré-visualização do documento */

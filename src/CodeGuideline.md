@@ -47,7 +47,7 @@ App de uso pessoal do responsável pelo arranjo de discursos. Menus: Programaç�
 - **src/lib/date.ts**: datas SEMPRE como string `yyyy-MM-dd`. Nunca usar `new Date("yyyy-MM-dd")` (interpreta como UTC e volta um dia).
 - **src/lib/report.ts**: agrupa os arranjos do mês por congregação — é o eixo do relatório.
 - **src/lib/whatsapp.ts** + **src/lib/rich-text.ts**: versão em texto puro do documento (`*negrito*`) e a marcação `**negrito**` das observações.
-- **src/pages/relatorio/report-document.tsx**: documento único, usado na tela e na impressão. O bloco `@media print` de `src/index.css` cuida da escala A4 e da quebra de página (classes `print-doc`, `print-page` e `no-print`).
+- **src/pages/relatorio/report-document.tsx**: documento consolidado por tipo de arranjo, com todos os arranjos em ordem de data e sem separação por congregação. O bloco `@media print` de `src/index.css` cuida da escala A4 (classes `print-doc`, `print-only` e `no-print`).
 - **src/features/auth/**: login com Supabase Auth; as páginas só são exibidas após a sessão ser confirmada e o usuário constar em `public.usuarios_autorizados`. As policies RLS também validam essa lista em todas as tabelas operacionais.
 - **Significado de `programacoes.congregacao_id`**: em `tipo = 'vem'` é a congregação de ORIGEM do orador (pode ser a local); em `tipo = 'vai'` é a congregação de DESTINO (não local), independente da congregação do orador. Está comentado no banco e em `src/services/programacoes.ts`.
 

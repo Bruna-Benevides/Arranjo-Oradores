@@ -1,6 +1,6 @@
 // Cadastro de congregação.
 
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -25,6 +25,12 @@ import {
     readSessionFormDraft,
     saveSessionFormDraft,
 } from "@/lib/session-form-draft";
+import {
+    buscarEnderecoPorCoordenadas,
+    coordenadasDoLinkMaps,
+    enderecoLegivelDoLink,
+    linkGoogleMapsDoEndereco,
+} from "@/lib/map-address";
 import type { Congregacao } from "@/types/domain";
 
 const esquema = z.object({
@@ -64,8 +70,10 @@ export function CongregacaoFormDialog({
     const salvar = useSalvarCongregacao();
     const definirLocal = useDefinirCongregacaoLocal();
     const { data: congregacaoLocal } = useCongregacaoLocal();
+    const [buscandoEndereco, setBuscandoEndereco] = useState(false);
+    const consultaEndereco = useRef<AbortController | null>(null);
 
-    const { control, handleSubmit, register, reset, watch, formState } = useForm<Valores>({
+    const { control, handleSubmit, register, reset, setValue, watch, formState } = useForm<Valores>({
         resolver: zodResolver(esquema),
         defaultValues: VALORES_INICIAIS,
     });
@@ -92,6 +100,56 @@ export function CongregacaoFormDialog({
         const subscription = watch((valores) => saveSessionFormDraft(RASCUNHO_KEY, valores));
         return () => subscription.unsubscribe();
     }, [aberto, congregacao, watch]);
+
+    useEffect(() => {
+        if (aberto) return;
+        consultaEndereco.current?.abort();
+        consultaEndereco.current = null;
+        setBuscandoEndereco(false);
+    }, [aberto]);
+
+    const atualizarLinkPeloEndereco = (endereco: string) => {
+        if (endereco.trim()) {
+            setValue("google_maps_url", linkGoogleMapsDoEndereco(endereco), { shouldDirty: true });
+        }
+    };
+
+    const atualizarEnderecoPeloLink = async (link: string) => {
+        const valor = link.trim();
+        if (!valor) return;
+
+        const coordenadas = coordenadasDoLinkMaps(valor);
+        if (!coordenadas) {
+            const enderecoLegivel = enderecoLegivelDoLink(valor);
+            if (enderecoLegivel && !/^-?\d{1,2}\.\d+\s*,\s*-?\d{1,3}\.\d+$/.test(enderecoLegivel)) {
+                setValue("endereco", enderecoLegivel, { shouldDirty: true });
+                return;
+            }
+            toast.error(
+                "Esse link não contém coordenadas ou endereço legível. Cole um link completo do Google Maps ou preencha o endereço manualmente.",
+            );
+            return;
+        }
+
+        consultaEndereco.current?.abort();
+        const controller = new AbortController();
+        consultaEndereco.current = controller;
+        setBuscandoEndereco(true);
+        try {
+            const endereco = await buscarEnderecoPorCoordenadas(coordenadas, controller.signal);
+            setValue("endereco", endereco, { shouldDirty: true });
+            setValue("google_maps_url", valor, { shouldDirty: true });
+            toast.success("Endereço preenchido pelo mapa.");
+        } catch (excecao) {
+            if (excecao instanceof DOMException && excecao.name === "AbortError") return;
+            toast.error(excecao instanceof Error ? excecao.message : "Não foi possível localizar o endereço.");
+        } finally {
+            if (consultaEndereco.current === controller) {
+                consultaEndereco.current = null;
+                setBuscandoEndereco(false);
+            }
+        }
+    };
 
     const enviar = handleSubmit(async (valores) => {
         try {
@@ -145,7 +203,12 @@ export function CongregacaoFormDialog({
 
                     <div className="space-y-2">
                         <Label htmlFor="congregacao-endereco">Endereço</Label>
-                        <Textarea id="congregacao-endereco" {...register("endereco")} />
+                        <Textarea
+                            id="congregacao-endereco"
+                            {...register("endereco", {
+                                onBlur: (evento) => atualizarLinkPeloEndereco(evento.target.value),
+                            })}
+                        />
                     </div>
 
                     <div className="grid gap-4 sm:grid-cols-2">
@@ -164,8 +227,18 @@ export function CongregacaoFormDialog({
                         <Input
                             id="congregacao-link"
                             placeholder="https://maps.app.goo.gl/..."
-                            {...register("google_maps_url")}
+                            {...register("google_maps_url", {
+                                onBlur: (evento) => void atualizarEnderecoPeloLink(evento.target.value),
+                            })}
                         />
+                        <p className="text-xs text-muted-foreground">
+                            Ao sair do campo, o endereço será buscado no OpenStreetMap. O endereço também
+                            gera um link de pesquisa no Google Maps. Links encurtados podem não fornecer
+                            dados suficientes para preencher o endereço.
+                        </p>
+                        {buscandoEndereco ? (
+                            <p className="text-xs text-muted-foreground">Buscando endereço do mapa...</p>
+                        ) : null}
                     </div>
 
                     <div className="space-y-2">
@@ -201,8 +274,17 @@ export function CongregacaoFormDialog({
                     />
 
                     <div className="space-y-2">
-                        <Button type="submit" size="lg" className="w-full" disabled={salvar.isPending}>
-                            {salvar.isPending ? "Salvando..." : "Salvar"}
+                        <Button
+                            type="submit"
+                            size="lg"
+                            className="w-full"
+                            disabled={salvar.isPending || buscandoEndereco}
+                        >
+                            {buscandoEndereco
+                                ? "Buscando endereço..."
+                                : salvar.isPending
+                                  ? "Salvando..."
+                                  : "Salvar"}
                         </Button>
                         <Button
                             type="button"

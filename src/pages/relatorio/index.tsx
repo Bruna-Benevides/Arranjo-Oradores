@@ -1,7 +1,7 @@
-// Tela de Relatório: um documento por congregação do mês/tipo escolhidos,
-// pronto para imprimir/PDF ou colar no WhatsApp.
+// Tela de Relatório: um documento por tipo para imprimir/PDF; o texto pode ser
+// copiado separadamente para cada congregação no WhatsApp.
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Info, Pencil, Printer } from "lucide-react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
@@ -22,6 +22,7 @@ import { buildDocumentoWhatsApp } from "@/lib/whatsapp";
 import type { GrupoRelatorio } from "@/types/domain";
 import { ObservacoesDialog } from "./observacoes-dialog";
 import { ReportCongregationBlock } from "./report-congregation-block";
+import { ReportDocument } from "./report-document";
 
 const RelatorioPage = () => {
   const { mes, mesDate, mesLabel, tipo, setTipo, shiftMes } = useMonthParams();
@@ -31,26 +32,18 @@ const RelatorioPage = () => {
 
   const [incluirContato, setIncluirContato] = useState(true);
   const [observacoesAberto, setObservacoesAberto] = useState(false);
-  /**
-   * Guarda qual congregação está sendo impressa sozinha. Enquanto tem valor, os
-   * outros blocos recebem `print:hidden`, de modo que o "Imprimir / PDF" gere
-   * apenas aquele documento.
-   */
-  const [imprimindoChave, setImprimindoChave] = useState<string | null>(null);
 
   const grupos = useMemo(() => agruparPorCongregacao(arranjos ?? []), [arranjos]);
+  const relatorioUnico = useMemo<GrupoRelatorio>(
+    () => ({
+      congregacaoId: null,
+      congregacaoNome: "",
+      arranjos: [...(arranjos ?? [])].sort((a, b) => a.data.localeCompare(b.data)),
+    }),
+    [arranjos],
+  );
   const observacoes = useMemo(() => linhasObservacoes(observacoesTexto), [observacoesTexto]);
   const mesLabelUpper = formatMonthUpper(mesDate);
-
-  // A impressão precisa acontecer depois do React aplicar o print:hidden.
-  useEffect(() => {
-    if (!imprimindoChave) return;
-    const timer = window.setTimeout(() => {
-      window.print();
-      setImprimindoChave(null);
-    }, 60);
-    return () => window.clearTimeout(timer);
-  }, [imprimindoChave]);
 
   const copiarParaWhatsApp = async (grupo: GrupoRelatorio) => {
     const texto = buildDocumentoWhatsApp({
@@ -77,7 +70,7 @@ const RelatorioPage = () => {
         <PageHeader
           eyebrow="Relatório mensal"
           titulo="Arranjo para enviar"
-          subtitulo="Um documento por congregação, no mesmo formato da sua tabela."
+          subtitulo="Um documento único por tipo de arranjo, com as datas em ordem."
         />
         <div className="h-72 animate-pulse rounded-xl bg-muted" />
       </div>
@@ -90,7 +83,7 @@ const RelatorioPage = () => {
         <PageHeader
           eyebrow="Relatório mensal"
           titulo="Arranjo para enviar"
-          subtitulo="Um documento por congregação, no mesmo formato da sua tabela. Imprima, salve em PDF ou copie o texto para o WhatsApp."
+          subtitulo="Um documento único por tipo de arranjo, com as datas em ordem. Imprima, salve em PDF ou copie o texto para o WhatsApp."
         />
 
         <MonthNavigator label={mesLabel} onPrev={() => shiftMes(-1)} onNext={() => shiftMes(1)} />
@@ -124,9 +117,14 @@ const RelatorioPage = () => {
               <span className="text-sm font-medium">Mostrar coluna Contato</span>
             </label>
 
-            <Button variant="outline" className="gap-2" onClick={() => window.print()}>
+            <Button
+              variant="outline"
+              className="gap-2"
+              onClick={() => window.print()}
+              disabled={grupos.length === 0}
+            >
               <Printer className="h-4 w-4" />
-              Imprimir todos
+              Imprimir relatório
             </Button>
           </div>
 
@@ -155,25 +153,30 @@ const RelatorioPage = () => {
         ) : null}
       </div>
 
-      <div className="space-y-10">
+      <div className="no-print space-y-10">
         {grupos.map((grupo) => {
-          const chave = chaveDoGrupo(grupo);
           return (
             <ReportCongregationBlock
-              key={chave}
+              key={chaveDoGrupo(grupo)}
               grupo={grupo}
-              mesLabelUpper={mesLabelUpper}
-              congregacaoLocal={congregacaoLocal ?? null}
-              observacoes={observacoes}
-              incluirContato={incluirContato}
-              ocultarNaImpressao={imprimindoChave !== null && imprimindoChave !== chave}
-              imprimindo={imprimindoChave === chave}
-              onImprimir={() => setImprimindoChave(chave)}
               onCopiar={() => void copiarParaWhatsApp(grupo)}
             />
           );
         })}
       </div>
+
+      {relatorioUnico.arranjos.length > 0 ? (
+        <div>
+          <ReportDocument
+            mesLabelUpper={mesLabelUpper}
+            congregacaoLocal={congregacaoLocal ?? null}
+            grupo={relatorioUnico}
+            observacoes={observacoes}
+            incluirContato={incluirContato}
+            mostrarCongregacaoDoGrupo={false}
+          />
+        </div>
+      ) : null}
 
       <ObservacoesDialog
         aberto={observacoesAberto}

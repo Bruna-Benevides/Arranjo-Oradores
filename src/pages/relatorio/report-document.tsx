@@ -1,8 +1,7 @@
-// Documento do relatório: um por congregação.
+// Documento consolidado do relatório do tipo selecionado.
 //
-// O mesmo markup serve para a tela e para a impressão/PDF — a escala menor em
-// A4 e a quebra de página são aplicadas em `src/index.css` (@media print),
-// através das classes .print-doc e .print-page.
+// O mesmo markup serve para a tela e para a impressão/PDF. A escala A4 é
+// aplicada em `src/index.css` (@media print) pela classe .print-doc.
 
 import { formatDayMonth } from "@/lib/date";
 import { parseDestaques } from "@/lib/rich-text";
@@ -22,6 +21,7 @@ interface ReportDocumentProps {
   grupo: GrupoRelatorio;
   observacoes: string[];
   incluirContato: boolean;
+  mostrarCongregacaoDoGrupo?: boolean;
 }
 
 function celulaOradores(arranjo: ArranjoDetalhado): string {
@@ -40,9 +40,10 @@ export function ReportDocument({
   grupo,
   observacoes,
   incluirContato,
+  mostrarCongregacaoDoGrupo = true,
 }: ReportDocumentProps) {
   return (
-    <article className="print-doc print-page mx-auto w-full max-w-[780px] rounded-xl border border-border bg-card p-6 text-[15px] leading-relaxed text-foreground shadow-doc">
+    <article className="print-doc mx-auto w-full max-w-[780px] rounded-xl border border-border bg-card p-6 text-[15px] leading-relaxed text-foreground shadow-doc">
       <div className="print-doc-title border border-foreground/70 bg-doc px-4 py-4 text-center font-bold uppercase tracking-wide text-doc-foreground">
         Arranjo de discurso para o mês de {mesLabelUpper}
       </div>
@@ -85,9 +86,11 @@ export function ReportDocument({
 
       <hr className="my-6 border-foreground/30" />
 
-      <p className="font-bold uppercase">
-        Congregação : <span className="underline">{grupo.congregacaoNome}</span>
-      </p>
+      {mostrarCongregacaoDoGrupo ? (
+        <p className="font-bold uppercase">
+          Congregação : <span className="underline">{grupo.congregacaoNome}</span>
+        </p>
+      ) : null}
 
       <table className="print-doc-table mt-3 w-full border-collapse border border-foreground/70 text-[14px]">
         <thead>
