@@ -75,10 +75,14 @@ O projeto é um site web responsivo com manifest e service worker. Gere os arqui
 - [ ] Criar, editar, buscar e excluir cânticos.
 - [ ] Criar arranjos **Quem vem** e **Quem vai**, incluindo edição, evento especial, seleção de discurso/orador e confirmação de exclusão.
 - [ ] Conferir datas no mês, contadores, último uso e ordenação do histórico.
-- [ ] Conferir relatórios por congregação, observações editáveis, coluna de contato, impressão/PDF e cópia para WhatsApp.
+- [ ] Conferir relatório consolidado do tipo selecionado (Quem vem ou Quem vai), observações editáveis, coluna de contato, impressão/PDF e cópia separada por congregação para WhatsApp.
 - [ ] Gerar um backup, testar sua restauração em um ambiente de teste e confirmar que registros existentes são mantidos, lacunas preenchidas e registros ausentes adicionados.
 - [ ] Confirmar que excluir discurso/congregação com arranjo passado mostra as datas e mantém cópia dos dados no histórico; arranjos atuais/futuros devem impedir a exclusão.
 - [ ] No celular, instalar a PWA e validar a navegação responsiva; confirmar que os dados mostram aviso/erro quando não há conexão.
+
+## Endereço e mapa das congregações
+
+No cadastro de congregação, ao sair do campo **Endereço**, o app cria um link de pesquisa no Google Maps. Ao sair do campo do link, tenta preencher rua, número, bairro, cidade e CEP usando coordenadas reconhecidas em links completos do Google Maps. Essa consulta envia as coordenadas ao serviço público OpenStreetMap/Nominatim; não exige chave de API. Links encurtados podem não conter coordenadas acessíveis ao navegador, então, nesse caso, abra o link no Google Maps e copie o endereço completo da barra do navegador, ou informe o endereço manualmente. O link gerado a partir do endereço pesquisa esse texto no Google Maps, não fixa necessariamente um ponto exato.
 
 ## Dados de demonstração
 

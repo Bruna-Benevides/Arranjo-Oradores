@@ -108,6 +108,12 @@ export function CongregacaoFormDialog({
         setBuscandoEndereco(false);
     }, [aberto]);
 
+    const cancelarBuscaEndereco = () => {
+        consultaEndereco.current?.abort();
+        consultaEndereco.current = null;
+        setBuscandoEndereco(false);
+    };
+
     const atualizarLinkPeloEndereco = (endereco: string) => {
         if (endereco.trim()) {
             setValue("google_maps_url", linkGoogleMapsDoEndereco(endereco), { shouldDirty: true });
@@ -206,6 +212,7 @@ export function CongregacaoFormDialog({
                         <Textarea
                             id="congregacao-endereco"
                             {...register("endereco", {
+                                onChange: cancelarBuscaEndereco,
                                 onBlur: (evento) => atualizarLinkPeloEndereco(evento.target.value),
                             })}
                         />
@@ -228,6 +235,7 @@ export function CongregacaoFormDialog({
                             id="congregacao-link"
                             placeholder="https://maps.app.goo.gl/..."
                             {...register("google_maps_url", {
+                                onChange: cancelarBuscaEndereco,
                                 onBlur: (evento) => void atualizarEnderecoPeloLink(evento.target.value),
                             })}
                         />

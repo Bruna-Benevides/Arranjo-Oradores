@@ -47,7 +47,7 @@ function extrairCoordenadas(texto: string): Coordenadas | null {
 }
 
 function hostGoogleMaps(url: URL): boolean {
-  return (
+  return url.protocol === "https:" && (
     url.hostname === "maps.app.goo.gl" ||
     url.hostname === "goo.gl" ||
     url.hostname === "maps.google.com" ||
@@ -60,7 +60,15 @@ export function enderecoLegivelDoLink(link: string): string | null {
   try {
     const url = new URL(link);
     if (!hostGoogleMaps(url)) return null;
-    return url.searchParams.get("query") ?? url.searchParams.get("q") ?? url.searchParams.get("destination");
+    const busca =
+      url.searchParams.get("query") ??
+      url.searchParams.get("q") ??
+      url.searchParams.get("destination");
+    if (busca) return busca;
+
+    const trecho = url.pathname.match(/\/maps\/(?:place|search|dir)\/([^/]+)/)?.[1];
+    if (!trecho) return null;
+    return decodeURIComponent(trecho.replace(/\+/g, " "));
   } catch {
     return null;
   }
@@ -127,7 +135,9 @@ export function coordenadasDoLinkMaps(link: string): Coordenadas | null {
     const textoBusca =
       url.searchParams.get("query") ??
       url.searchParams.get("q") ??
-      url.searchParams.get("destination");
+      url.searchParams.get("destination") ??
+      url.searchParams.get("center") ??
+      url.searchParams.get("ll");
     if (mapa) {
       const latitude = Number(mapa[1]);
       const longitude = Number(mapa[2]);
